@@ -1,0 +1,6 @@
+{
+  "name": "Starches - Food & Marketplace Delivery",
+  "description": "Modern local food and product delivery marketplace connecting customers, restaurants, shops, and delivery riders in Tanzania.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
