@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ThemeToggle } from '../common/ThemeToggle';
+import { GoogleLiveTrackingMap } from '../maps/GoogleLiveTrackingMap';
 import {
   ArrowLeft,
   Phone,
@@ -128,120 +129,21 @@ export const OrderTrackingScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Interactive Route Map Canvas (matches mockup screen 4) */}
-      <div className="relative flex-1 min-h-[340px] bg-[#E9E5DD] dark:bg-[#1B2129] overflow-hidden flex flex-col">
-        {/* Dar es Salaam Coastline & Road Map SVG */}
-        <svg
-          viewBox="0 0 400 400"
-          className="w-full h-full absolute inset-0 preserve-3d"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          {/* Water Body (Indian Ocean Coastline) */}
-          <path
-            d="M 280 0 C 290 80 320 160 300 240 C 285 300 340 350 400 370 L 400 0 Z"
-            fill="#BEE3F8"
-            className="dark:fill-[#142634]"
-          />
-          {/* Sandy Beach Line */}
-          <path
-            d="M 280 0 C 290 80 320 160 300 240 C 285 300 340 350 400 370"
-            stroke="#ECC94B"
-            strokeWidth="3"
-            strokeDasharray="4 2"
-            opacity="0.6"
-          />
-
-          {/* Urban Road Grid */}
-          <path d="M 0 100 L 280 100" stroke="#CBD5E0" strokeWidth="3" className="dark:stroke-[#2D3748]" />
-          <path d="M 0 180 L 300 180" stroke="#CBD5E0" strokeWidth="4" className="dark:stroke-[#2D3748]" />
-          <path d="M 0 270 L 280 270" stroke="#CBD5E0" strokeWidth="3" className="dark:stroke-[#2D3748]" />
-          <path d="M 120 0 L 120 380" stroke="#CBD5E0" strokeWidth="3" className="dark:stroke-[#2D3748]" />
-          <path d="M 210 0 L 210 380" stroke="#CBD5E0" strokeWidth="3" className="dark:stroke-[#2D3748]" />
-
-          {/* District Labels */}
-          <text x="50" y="80" fill="#718096" fontSize="11" fontWeight="bold" opacity="0.6">
-            KINONDONI
-          </text>
-          <text x="180" y="320" fill="#718096" fontSize="13" fontWeight="bold" opacity="0.7">
-            Dar es Salaam
-          </text>
-          <text x="210" y="140" fill="#718096" fontSize="10" fontWeight="bold" opacity="0.6">
-            MIKOCHENI
-          </text>
-          <text x="310" y="90" fill="#3182CE" fontSize="10" fontWeight="bold" opacity="0.7">
-            INDIAN OCEAN
-          </text>
-
-          {/* Active Delivery Route Line (Orange zigzag following streets from screenshot) */}
-          <path
-            d="M 90 90 L 150 90 L 150 160 L 230 160 L 230 220 L 300 220"
-            stroke="#FF6B00"
-            strokeWidth="5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M 90 90 L 150 90 L 150 160 L 230 160 L 230 220 L 300 220"
-            stroke="#FFFFFF"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeDasharray="4 6"
-          />
-
-          {/* Restaurant Marker (Kinondoni) */}
-          <g transform="translate(70, 70)">
-            <circle cx="20" cy="20" r="16" fill="#FF6B00" />
-            <circle cx="20" cy="20" r="12" fill="#FFFFFF" />
-            <path
-              d="M 15 20 L 25 20 M 20 15 L 20 25"
-              stroke="#FF6B00"
-              strokeWidth="3"
-              strokeLinecap="round"
-            />
-          </g>
-
-          {/* Customer Destination Marker */}
-          <g transform="translate(285, 205)">
-            <circle cx="15" cy="15" r="14" fill="#1A1D20" />
-            <circle cx="15" cy="15" r="5" fill="#FF6B00" />
-          </g>
-
-          {/* Animated Rider Marker (Boda Boda) */}
-          <g transform={`translate(${140 + (riderProgress - 40) * 1.5}, ${145})`}>
-            <circle cx="18" cy="18" r="18" fill="#FF6B00" opacity="0.25" className="animate-ping" />
-            <circle cx="18" cy="18" r="14" fill="#FF6B00" stroke="#FFFFFF" strokeWidth="2.5" />
-            {/* Tiny boda boda icon */}
-            <path
-              d="M 12 18 L 15 22 L 22 22 L 25 15 M 15 15 L 22 15"
-              stroke="#FFFFFF"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </g>
-        </svg>
-
-        {/* Floating ETA Badge (matches mockup screen 4: "Arriving in 12 min") */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-          <div className="bg-white/95 dark:bg-[#1E2228]/95 backdrop-blur-md px-4 py-2 rounded-2xl shadow-lg border border-gray-100 dark:border-white/10 flex items-center gap-2 text-center">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#FF6B00] animate-pulse" />
-            <div>
-              <span className="text-[10px] text-gray-400 uppercase tracking-wider font-bold block">
-                {t.arrivingIn}
-              </span>
-              <span className="text-sm font-black text-gray-900 dark:text-white">
-                {order.status === 'delivered' ? 'Delivered!' : `${order.estimatedDeliveryMinutes} min`}
-              </span>
-            </div>
-          </div>
-        </div>
+      {/* 2. Google Maps Live Route & Vehicle Tracking (Uber / Bolt Style) */}
+      <div className="relative flex-1 min-h-[350px] bg-[#E9E5DD] dark:bg-[#1B2129] overflow-hidden flex flex-col">
+        <GoogleLiveTrackingMap
+          restaurantLocation={{ lat: -6.7924, lng: 39.2083 }}
+          customerLocation={order.deliveryAddress.coordinates || { lat: -6.7725, lng: 39.2483 }}
+          restaurantName={order.storeName}
+          orderStatus={order.status}
+          estimatedMinutes={order.estimatedDeliveryMinutes}
+        />
 
         {/* Dev simulation trigger button on bottom left of map */}
         <div className="absolute bottom-3 left-3 z-10">
           <button
             onClick={handleSimulateNextStep}
-            className="px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md text-white text-[10px] font-bold hover:bg-black/80 transition-colors"
+            className="px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md text-white text-[10px] font-bold hover:bg-black/80 transition-colors shadow-sm"
           >
             Advance Status (Dev)
           </button>

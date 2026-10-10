@@ -23,6 +23,10 @@ export const ExploreScreen: React.FC = () => {
     searchQuery,
     setSearchQuery,
     navigateTo,
+    currentAddress,
+    currentCity,
+    accessibleStoresCount,
+    setIsDropoffMapPickerOpen,
     language,
     t,
   } = useApp();
@@ -62,7 +66,27 @@ export const ExploreScreen: React.FC = () => {
   });
 
   return (
-    <div className="pb-24 max-w-md mx-auto px-4 space-y-4 animate-in fade-in duration-200">
+    <div className="pb-24 max-w-md mx-auto px-4 space-y-3.5 animate-in fade-in duration-200">
+      {/* Delivery Drop-off location bar in Explore */}
+      <div className="flex items-center justify-between text-xs bg-white dark:bg-[#1A1D22] p-2.5 rounded-2xl border border-gray-100 dark:border-white/5 shadow-2xs">
+        <div className="flex items-center gap-2">
+          <MapPin className="w-3.5 h-3.5 text-[#FF6B00]" />
+          <span className="font-extrabold text-gray-800 dark:text-gray-200 truncate max-w-[150px]">
+            {currentAddress.ward || currentAddress.district || currentCity.name}
+          </span>
+          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+            {accessibleStoresCount} nearby
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsDropoffMapPickerOpen(true)}
+          className="text-[11px] font-bold text-[#FF6B00] hover:underline"
+        >
+          {language === 'sw' ? 'Badili Ramani' : 'Change Map'}
+        </button>
+      </div>
+
       {/* Top Type Switcher: All, Restaurants, Marketplace */}
       <div className="flex bg-gray-100 dark:bg-[#1E2228] p-1 rounded-xl text-xs font-bold">
         <button

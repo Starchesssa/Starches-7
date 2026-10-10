@@ -13,6 +13,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { TanzaniaAddress, TanzaniaCity } from '../../types';
+import { GoogleAddressPickerMap } from '../maps/GoogleAddressPickerMap';
 
 export const AddressModal: React.FC = () => {
   const {
@@ -262,39 +263,13 @@ export const AddressModal: React.FC = () => {
           {/* TAB 2: Add New Address with Interactive Pin Map */}
           {activeTab === 'new' && (
             <form onSubmit={handleSaveNewAddress} className="space-y-3.5 text-xs">
-              {/* Interactive Visual Map Preview */}
-              <div className="relative h-36 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 bg-[#e5e3df] dark:bg-[#1a232c] flex items-center justify-center">
-                {/* Simulated Street Grid Map Graphic */}
-                <div
-                  className="absolute inset-0 opacity-40 dark:opacity-25"
-                  style={{
-                    backgroundImage: `radial-gradient(#94a3b8 1.5px, transparent 1.5px), radial-gradient(#94a3b8 1.5px, #e5e3df 1.5px)`,
-                    backgroundSize: '24px 24px',
-                    backgroundPosition: '0 0, 12px 12px',
-                  }}
-                />
-                {/* Street Lines */}
-                <svg className="absolute inset-0 w-full h-full stroke-gray-300 dark:stroke-gray-700" strokeWidth="4">
-                  <path d="M 0 50 Q 150 70 400 40" fill="none" stroke="#f1a967" strokeWidth="6" />
-                  <path d="M 100 0 L 120 150" fill="none" />
-                  <path d="M 280 0 L 260 150" fill="none" />
-                </svg>
-
-                {/* Animated Center Pin */}
-                <div className="relative z-10 flex flex-col items-center animate-bounce">
-                  <div className="bg-[#FF6B00] text-white p-2 rounded-full shadow-lg border-2 border-white">
-                    <MapPin className="w-5 h-5 fill-white" />
-                  </div>
-                  <div className="w-3 h-1 bg-black/40 rounded-full blur-[1px] mt-1" />
-                </div>
-
-                <div className="absolute bottom-2 left-2 right-2 bg-white/90 dark:bg-black/80 backdrop-blur-xs p-2 rounded-lg text-[10px] text-gray-700 dark:text-gray-200 flex items-center justify-between border border-gray-100 dark:border-white/10">
-                  <span className="font-semibold truncate">
-                    Pin: {ward}, {district}
-                  </span>
-                  <span className="text-[#FF6B00] font-bold">Tap to adjust</span>
-                </div>
-              </div>
+              {/* Interactive Google Map Pin Selector (Uber / Bolt Style) */}
+              <GoogleAddressPickerMap
+                initialCoordinates={mapPinCoords}
+                onLocationChange={(coords) => {
+                  setMapPinCoords(coords);
+                }}
+              />
 
               {/* Title selection chips */}
               <div>

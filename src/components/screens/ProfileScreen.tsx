@@ -24,8 +24,6 @@ import { AppTheme } from '../../types';
 export const ProfileScreen: React.FC = () => {
   const {
     user,
-    role,
-    setRole,
     theme,
     setTheme,
     isDarkMode,
@@ -33,6 +31,7 @@ export const ProfileScreen: React.FC = () => {
     setLanguage,
     navigateTo,
     setIsAddressModalOpen,
+    setIsDropoffMapPickerOpen,
     setIsHelpOpen,
     setIsNotificationsOpen,
     t,
@@ -42,6 +41,12 @@ export const ProfileScreen: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   const menuItems = [
+    {
+      id: 'dropoff-map',
+      icon: MapPin,
+      label: language === 'sw' ? 'Weka Eneo la Kushusha Kwenye Ramani' : 'Set Drop-off Location on Map',
+      action: () => setIsDropoffMapPickerOpen(true),
+    },
     {
       id: 'orders',
       icon: ClipboardList,
@@ -100,47 +105,7 @@ export const ProfileScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Switch Role Cards (Seller & Rider Dashboards) */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-transparent border border-orange-200 dark:border-orange-950/40 space-y-2.5">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-black uppercase tracking-wider text-[#FF6B00]">
-            Operational Dashboards
-          </span>
-          <span className="text-[10px] text-gray-400">Tanzania Partner Portal</span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => {
-              setRole('seller');
-              navigateTo('seller_dashboard');
-            }}
-            className="p-3 rounded-xl bg-white dark:bg-[#1E2228] border border-gray-200 dark:border-white/10 text-left hover:border-[#FF6B00] transition-colors group"
-          >
-            <Store className="w-5 h-5 text-[#FF6B00] mb-1.5" />
-            <h4 className="font-extrabold text-xs text-gray-900 dark:text-white">
-              Seller Dashboard
-            </h4>
-            <p className="text-[10px] text-gray-400 mt-0.5">Kitchens & Shops</p>
-          </button>
-
-          <button
-            onClick={() => {
-              setRole('rider');
-              navigateTo('rider_dashboard');
-            }}
-            className="p-3 rounded-xl bg-white dark:bg-[#1E2228] border border-gray-200 dark:border-white/10 text-left hover:border-[#FF6B00] transition-colors group"
-          >
-            <Bike className="w-5 h-5 text-[#FF6B00] mb-1.5" />
-            <h4 className="font-extrabold text-xs text-gray-900 dark:text-white">
-              Rider Dashboard
-            </h4>
-            <p className="text-[10px] text-gray-400 mt-0.5">Boda Boda Partner</p>
-          </button>
-        </div>
-      </div>
-
-      {/* 3. Main Navigation Items (matches mockup screen 9) */}
+      {/* 2. Main Navigation Items (matches mockup screen 9) */}
       <div className="rounded-2xl bg-white dark:bg-[#1E2228] border border-gray-100 dark:border-white/5 shadow-xs overflow-hidden divide-y divide-gray-100 dark:divide-white/5">
         {menuItems.map((item) => {
           const Icon = item.icon;

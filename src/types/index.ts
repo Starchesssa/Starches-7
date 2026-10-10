@@ -1,4 +1,4 @@
-export type AppRole = 'customer' | 'seller' | 'rider';
+export type AppRole = 'customer';
 export type AppTheme = 'light' | 'dark' | 'system';
 export type AppLanguage = 'en' | 'sw';
 
@@ -13,9 +13,7 @@ export type ScreenName =
   | 'order_details'
   | 'orders'
   | 'favorites'
-  | 'profile'
-  | 'seller_dashboard'
-  | 'rider_dashboard';
+  | 'profile';
 
 export interface TanzaniaCity {
   id: string;
@@ -72,6 +70,9 @@ export interface Store {
   isPopular?: boolean;
   phone: string;
   tagline: string;
+  coordinates?: { lat: number; lng: number };
+  isAccessible?: boolean;
+  maxDeliveryDistanceKm?: number;
 }
 
 export interface ProductAddon {
@@ -113,7 +114,7 @@ export interface Product {
 }
 
 export interface CartItem {
-  id: string; // cart item unique key
+  id: string;
   productId: string;
   storeId: string;
   storeName: string;
@@ -195,11 +196,20 @@ export interface Order {
   statusTimestamps: Partial<Record<OrderStatus, string>>;
 }
 
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  avatar?: string;
+  defaultCityId: string;
+}
+
 export interface RiderProfile {
   id: string;
   name: string;
   phone: string;
-  email: string;
+  email?: string;
   vehicleType: 'boda_boda' | 'bajaj' | 'bicycle' | 'car';
   vehiclePlate: string;
   rating: number;
@@ -208,15 +218,6 @@ export interface RiderProfile {
   currentEarningsToday: number;
   currentEarningsWeek: number;
   avatar: string;
-}
-
-export interface UserProfile {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  avatar?: string;
-  defaultCityId: string;
 }
 
 export interface NotificationItem {

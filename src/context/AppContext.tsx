@@ -11,7 +11,6 @@ import {
   CartItem,
   Order,
   OrderStatus,
-  RiderProfile,
   UserProfile,
   NotificationItem,
 } from '../types';
@@ -21,10 +20,12 @@ import {
   STORES,
   PRODUCTS,
   INITIAL_ORDERS,
-  INITIAL_RIDER,
   INITIAL_USER,
+  calculateDistanceKm,
 } from '../data/mockData';
 import { translations } from '../i18n/translations';
+import { db } from '../firebase/firebase';
+import { doc, setDoc, collection, onSnapshot } from 'firebase/firestore';
 
 interface ScreenState {
   screen: ScreenName;
@@ -41,9 +42,8 @@ interface AppContextType {
   setLanguage: (lang: AppLanguage) => void;
   t: typeof translations.en;
 
-  // Role
+  // Role (Customer only)
   role: AppRole;
-  setRole: (role: AppRole) => void;
 
   // Navigation
   activeScreen: ScreenName;
@@ -59,6 +59,20 @@ interface AppContextType {
   savedAddresses: TanzaniaAddress[];
   addAddress: (address: Omit<TanzaniaAddress, 'id'>) => TanzaniaAddress;
   selectAddress: (id: string) => void;
+  hasConfirmedInitialLocation: boolean;
+  setHasConfirmedInitialLocation: (confirmed: boolean) => void;
+  isDropoffMapPickerOpen: boolean;
+  setIsDropoffMapPickerOpen: (open: boolean) => void;
+  setDropoffLocation: (loc: {
+    ward: string;
+    district?: string;
+    city?: string;
+    mtaa?: string;
+    landmark?: string;
+    deliveryInstructions?: string;
+    coordinates: { lat: number; lng: number };
+  }) => void;
+  accessibleStoresCount: number;
 
   // Catalog
   stores: Store[];
@@ -100,14 +114,8 @@ interface AppContextType {
   toggleFavorite: (id: string) => void;
   isFavorite: (id: string) => boolean;
 
-  // User & Rider Profiles
+  // User Profile
   user: UserProfile;
-  rider: RiderProfile;
-  toggleRiderOnline: () => void;
-
-  // Seller Operations
-  toggleProductStock: (productId: string) => void;
-  addProduct: (product: Omit<Product, 'id'>) => void;
 
   // Modals
   isAddressModalOpen: boolean;
@@ -174,8 +182,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const t = translations[language] || translations.en;
 
-  // Role
-  const [role, setRole] = useState<AppRole>('customer');
+  // Strict Customer Only Role
+  const role: AppRole = 'customer';
 
   // Navigation History
   const [navHistory, setNavHistory] = useState<ScreenState[]>([{ screen: 'home' }]);
@@ -197,8 +205,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Location & City
   const [currentCity, setCurrentCity] = useState<TanzaniaCity>(TANZANIA_CITIES[0]);
-  const [savedAddresses, setSavedAddresses] = useState<TanzaniaAddress[]>(DEFAULT_ADDRESSES);
-  const [currentAddress, setCurrentAddress] = useState<TanzaniaAddress>(DEFAULT_ADDRESSES[0]);
+  const [savedAddresses, setSavedAddresses] = useState<TanzaniaAddress[]>(() => {
+    const cached = localStorage.getItem('starches_addresses');
+    return cached ? JSON.parse(cached) : DEFAULT_ADDRESSES;
+  });
+  const [currentAddress, setCurrentAddress] = useState<TanzaniaAddress>(savedAddresses[0] || DEFAULT_ADDRESSES[0]);
+
+  // Initial Drop-off Location Prompt State
+  const [hasConfirmedInitialLocation, setHasConfirmedInitialLocationState] = useState<boolean>(() => {
+    return localStorage.getItem('starches_dropoff_confirmed') === 'true';
+  });
+
+  const setHasConfirmedInitialLocation = (confirmed: boolean) => {
+    setHasConfirmedInitialLocationState(confirmed);
+    if (confirmed) {
+      localStorage.setItem('starches_dropoff_confirmed', 'true');
+    } else {
+      localStorage.removeItem('starches_dropoff_confirmed');
+    }
+  };
+
+  const [isDropoffMapPickerOpen, setIsDropoffMapPickerOpen] = useState<boolean>(false);
 
   const selectCity = (cityId: string) => {
     const found = TANZANIA_CITIES.find((c) => c.id === cityId);
@@ -214,8 +241,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...addr,
       id: `addr-${Date.now()}`,
     };
-    setSavedAddresses((prev) => [newAddr, ...prev]);
+    const updated = [newAddr, ...savedAddresses];
+    setSavedAddresses(updated);
     setCurrentAddress(newAddr);
+    localStorage.setItem('starches_addresses', JSON.stringify(updated));
+
+    // Also persist to Firebase if online
+    try {
+      setDoc(doc(db, 'addresses', newAddr.id), {
+        ...newAddr,
+        userId: INITIAL_USER.id,
+        createdAt: new Date().toISOString(),
+      }).catch((err) => console.log('Firestore offline sync:', err));
+    } catch (e) {
+      // offline-safe
+    }
+
     return newAddr;
   };
 
@@ -224,9 +265,96 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (found) setCurrentAddress(found);
   };
 
+  const setDropoffLocation = (loc: {
+    ward: string;
+    district?: string;
+    city?: string;
+    mtaa?: string;
+    landmark?: string;
+    deliveryInstructions?: string;
+    coordinates: { lat: number; lng: number };
+  }) => {
+    const cityName = loc.city || currentCity.name;
+    const targetCity =
+      TANZANIA_CITIES.find(
+        (c) =>
+          c.name.toLowerCase().includes(cityName.toLowerCase()) ||
+          cityName.toLowerCase().includes(c.name.toLowerCase())
+      ) || currentCity;
+
+    setCurrentCity(targetCity);
+
+    const newAddr: TanzaniaAddress = {
+      id: `addr-${Date.now()}`,
+      title: 'Drop-off Spot',
+      city: targetCity.name,
+      district: loc.district || 'Kinondoni',
+      ward: loc.ward || 'Selected Spot',
+      mtaa: loc.mtaa || 'Main Road',
+      landmark: loc.landmark || '',
+      deliveryInstructions: loc.deliveryInstructions || '',
+      coordinates: loc.coordinates,
+      isDefault: true,
+    };
+
+    setCurrentAddress(newAddr);
+    setSavedAddresses((prev) => [newAddr, ...prev.filter((a) => a.id !== newAddr.id)]);
+    localStorage.setItem('starches_addresses', JSON.stringify([newAddr, ...savedAddresses]));
+    setHasConfirmedInitialLocation(true);
+    setIsDropoffMapPickerOpen(false);
+  };
+
+  // Dynamic proximity calculation for nearby stores & products based on customer drop-off location
+  const calculateProximityStores = (allStores: Store[], addr: TanzaniaAddress): Store[] => {
+    if (!addr || !addr.coordinates) return allStores;
+    const userLat = addr.coordinates.lat;
+    const userLng = addr.coordinates.lng;
+    const userCity = (addr.city || 'Dar es Salaam').toLowerCase();
+
+    return allStores
+      .map((store) => {
+        if (!store.coordinates) return store;
+        const distanceKm = calculateDistanceKm(userLat, userLng, store.coordinates.lat, store.coordinates.lng);
+        const storeCity = (store.city || '').toLowerCase();
+        const isSameCity =
+          storeCity.includes(userCity) ||
+          userCity.includes(storeCity) ||
+          (userCity.includes('dar') && storeCity.includes('dar'));
+
+        const maxRadius = store.maxDeliveryDistanceKm || 18;
+        const isAccessible = isSameCity && distanceKm <= maxRadius;
+
+        const minMinutes = Math.max(15, Math.round(15 + distanceKm * 3.5));
+        const maxMinutes = Math.max(25, Math.round(25 + distanceKm * 4.5));
+        const deliveryFee = isAccessible
+          ? Math.min(6000, Math.max(1500, Math.round((1500 + distanceKm * 400) / 500) * 500))
+          : store.deliveryFee;
+
+        return {
+          ...store,
+          distanceKm,
+          isAccessible,
+          deliveryTimeMinutes: { min: minMinutes, max: maxMinutes },
+          deliveryFee,
+        };
+      })
+      .sort((a, b) => {
+        if (a.isAccessible && !b.isAccessible) return -1;
+        if (!a.isAccessible && b.isAccessible) return 1;
+        return a.distanceKm - b.distanceKm;
+      });
+  };
+
   // Catalog
-  const [stores, setStores] = useState<Store[]>(STORES);
-  const [products, setProducts] = useState<Product[]>(PRODUCTS);
+  const [stores, setStores] = useState<Store[]>(() => calculateProximityStores(STORES, currentAddress));
+
+  useEffect(() => {
+    setStores(calculateProximityStores(STORES, currentAddress));
+  }, [currentAddress]);
+
+  const accessibleStoresCount = stores.filter((s) => s.isAccessible).length;
+
+  const [products] = useState<Product[]>(PRODUCTS);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -240,7 +368,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     note?: string
   ) => {
     setCart((prev) => {
-      // Check if product with same addons exists
       const addonKey = selectedAddons ? selectedAddons.map((a) => a.addonId).sort().join(',') : '';
       const existingIndex = prev.findIndex(
         (item) =>
@@ -299,7 +426,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const cartTotal = cartSubtotal + cartDeliveryFee;
 
   // Orders
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
+  const [orders, setOrders] = useState<Order[]>(() => {
+    const cached = localStorage.getItem('starches_orders');
+    return cached ? JSON.parse(cached) : INITIAL_ORDERS;
+  });
+
   const activeOrder = orders.find((o) => o.status !== 'delivered' && o.status !== 'cancelled') || null;
 
   const placeOrder = (paymentDetails: {
@@ -315,9 +446,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newOrder: Order = {
       id: `order-${Date.now()}`,
       orderNumber,
-      customerId: user.id,
-      customerName: user.name,
-      customerPhone: user.phone,
+      customerId: INITIAL_USER.id,
+      customerName: INITIAL_USER.name,
+      customerPhone: INITIAL_USER.phone,
       storeId: store.id,
       storeName: store.name,
       storePhone: store.phone,
@@ -352,9 +483,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         vehicleType: 'Boda Boda',
         vehiclePlate: 'MC 482 DZ',
         avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-        currentLocation: { lat: -6.78, lng: 39.23 },
+        currentLocation: { lat: -6.7845, lng: 39.2280 },
       },
-      estimatedDeliveryMinutes: 25,
+      estimatedDeliveryMinutes: 20,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       statusTimestamps: {
@@ -363,16 +494,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       },
     };
 
-    setOrders((prev) => [newOrder, ...prev]);
+    const updated = [newOrder, ...orders];
+    setOrders(updated);
+    localStorage.setItem('starches_orders', JSON.stringify(updated));
     clearCart();
+
+    // Persist to Firebase Firestore
+    try {
+      setDoc(doc(db, 'orders', newOrder.id), {
+        ...newOrder,
+        createdAt: newOrder.createdAt,
+      }).catch((err) => console.log('Firestore order write:', err));
+    } catch (e) {
+      // offline-safe
+    }
 
     // Add notification
     const newNotif: NotificationItem = {
       id: `notif-${Date.now()}`,
       title: 'Order Confirmed!',
       titleSw: 'Oda Imethibitishwa!',
-      message: `Your order #${orderNumber} from ${store.name} is being prepared.`,
-      messageSw: `Oda yako #${orderNumber} kutoka ${store.name} inaanza kuandaliwa.`,
+      message: `Your order #${orderNumber} from ${store.name} is confirmed and in the kitchen.`,
+      messageSw: `Oda yako #${orderNumber} kutoka ${store.name} imethibitishwa na inaanza kuandaliwa.`,
       timestamp: 'Just now',
       type: 'order',
       isRead: false,
@@ -384,7 +527,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const reorder = (prevOrder: Order) => {
-    // Add all items from prevOrder to cart
     prevOrder.items.forEach((item) => {
       const product = products.find((p) => p.id === item.productId);
       if (product) {
@@ -395,8 +537,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateOrderStatus = (orderId: string, status: OrderStatus) => {
-    setOrders((prev) =>
-      prev.map((order) => {
+    setOrders((prev) => {
+      const updated = prev.map((order) => {
         if (order.id !== orderId) return order;
         return {
           ...order,
@@ -407,43 +549,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             [status]: new Date().toISOString(),
           },
         };
-      })
-    );
+      });
+      localStorage.setItem('starches_orders', JSON.stringify(updated));
+      return updated;
+    });
+
+    // Update Firestore if available
+    try {
+      setDoc(
+        doc(db, 'orders', orderId),
+        { status, updatedAt: new Date().toISOString() },
+        { merge: true }
+      ).catch(() => {});
+    } catch (e) {}
   };
 
   // Favorites
-  const [favorites, setFavorites] = useState<string[]>(['store-mamboz', 'prod-classic-beef', 'store-zanzibar-pizza']);
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    const cached = localStorage.getItem('starches_favs');
+    return cached ? JSON.parse(cached) : ['store-mamboz', 'prod-classic-beef', 'store-zanzibar-pizza'];
+  });
 
   const toggleFavorite = (id: string) => {
-    setFavorites((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+    setFavorites((prev) => {
+      const updated = prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id];
+      localStorage.setItem('starches_favs', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const isFavorite = (id: string) => favorites.includes(id);
 
-  // User & Rider
+  // User Profile
   const [user] = useState<UserProfile>(INITIAL_USER);
-  const [rider, setRider] = useState<RiderProfile>(INITIAL_RIDER);
-
-  const toggleRiderOnline = () => {
-    setRider((prev) => ({ ...prev, isOnline: !prev.isOnline }));
-  };
-
-  // Seller Operations
-  const toggleProductStock = (productId: string) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === productId ? { ...p, isAvailable: !p.isAvailable } : p))
-    );
-  };
-
-  const addProduct = (newProdData: Omit<Product, 'id'>) => {
-    const newProd: Product = {
-      ...newProdData,
-      id: `prod-${Date.now()}`,
-    };
-    setProducts((prev) => [newProd, ...prev]);
-  };
 
   // Modals & Notifications
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
@@ -489,7 +627,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setLanguage,
         t,
         role,
-        setRole,
         activeScreen,
         screenParams,
         navigateTo,
@@ -501,6 +638,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         savedAddresses,
         addAddress,
         selectAddress,
+        hasConfirmedInitialLocation,
+        setHasConfirmedInitialLocation,
+        isDropoffMapPickerOpen,
+        setIsDropoffMapPickerOpen,
+        setDropoffLocation,
+        accessibleStoresCount,
         stores,
         products,
         selectedCategory,
@@ -524,10 +667,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleFavorite,
         isFavorite,
         user,
-        rider,
-        toggleRiderOnline,
-        toggleProductStock,
-        addProduct,
         isAddressModalOpen,
         setIsAddressModalOpen,
         isNotificationsOpen,

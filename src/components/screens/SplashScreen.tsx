@@ -44,16 +44,24 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onDismiss }) => {
           </span>
         </div>
 
-        {/* Top Right Controls: Theme Toggle + Language */}
+        {/* Top Right Controls: Theme Toggle + Language + Skip */}
         <div className="flex items-center gap-2">
           <ThemeToggle showLabels={false} />
 
           <button
             onClick={() => setLanguage(language === 'en' ? 'sw' : 'en')}
-            className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200"
+            className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200"
           >
             <Globe className="w-3 h-3 text-[#FF6B00]" />
-            <span>{language === 'en' ? 'Kiswahili' : 'English'}</span>
+            <span>{language === 'en' ? 'SW' : 'EN'}</span>
+          </button>
+
+          <button
+            onClick={onDismiss}
+            className="text-xs font-black px-2.5 py-1 rounded-full bg-[#FF6B00] text-white shadow-sm hover:bg-[#E55A00] transition-colors flex items-center gap-1"
+          >
+            <span>{language === 'sw' ? 'Chagua Eneo' : 'Set Location'}</span>
+            <ArrowRight className="w-3 h-3" />
           </button>
         </div>
       </div>
@@ -109,7 +117,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onDismiss }) => {
           onClick={onDismiss}
           className="w-full py-3.5 px-6 rounded-2xl bg-[#FF6B00] hover:bg-[#E55A00] text-white font-extrabold shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2 text-sm transition-all hover:translate-y-[-1px] active:translate-y-[0px]"
         >
-          <span>{language === 'sw' ? 'Anza Kutumia Starches' : 'Get Started'}</span>
+          <span>{language === 'sw' ? 'Weka Eneo la Kushusha & Anza' : 'Set Drop-off Location & Start'}</span>
           <ArrowRight className="w-4 h-4" />
         </button>
 

@@ -8,7 +8,6 @@ import {
   Globe,
   Bell,
   Search,
-  Sparkles,
   SlidersHorizontal,
 } from 'lucide-react';
 
@@ -17,6 +16,7 @@ export const Header: React.FC = () => {
     currentCity,
     currentAddress,
     setIsAddressModalOpen,
+    setIsDropoffMapPickerOpen,
     language,
     setLanguage,
     isDarkMode,
@@ -26,18 +26,15 @@ export const Header: React.FC = () => {
     activeScreen,
     notifications,
     setIsNotificationsOpen,
-    role,
-    setRole,
     t,
   } = useApp();
 
-  const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
     <header className="sticky top-0 z-30 transition-colors bg-white/95 dark:bg-[#121417]/95 backdrop-blur-md border-b border-gray-100 dark:border-white/5">
       <div className="max-w-md mx-auto px-4 pt-3 pb-2.5">
-        {/* Top Bar: Brand Logo & Top Right Actions */}
+        {/* Top Bar: Brand Logo & Top Right Sliding Theme Switch */}
         <div className="flex items-center justify-between gap-2 mb-2.5">
           {/* Logo */}
           <button
@@ -48,15 +45,15 @@ export const Header: React.FC = () => {
             <Logo size="md" isDark={isDarkMode} />
           </button>
 
-          {/* Top Right Corner Controls: Dedicated Light/Dark Toggle + Language + Bell */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            {/* Top Right Corner Light / Dark Mode Toggle */}
-            <ThemeToggle showLabels={true} />
+          {/* Top Right Corner Controls: Sliding Switch Toggle + Language + Bell */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Sliding Theme Switch */}
+            <ThemeToggle />
 
             {/* Language Toggle */}
             <button
               onClick={() => setLanguage(language === 'en' ? 'sw' : 'en')}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-white/10 hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-colors"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-white/10 hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-colors"
               title="Toggle English / Kiswahili"
             >
               <Globe className="w-3.5 h-3.5 text-[#FF6B00]" />
@@ -77,11 +74,10 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Location & Quick Context Row */}
+        {/* Location Row (Customer Delivery Address) */}
         <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300 mb-2">
-          {/* Location button */}
           <button
-            onClick={() => setIsAddressModalOpen(true)}
+            onClick={() => setIsDropoffMapPickerOpen(true)}
             className="flex items-center gap-1.5 font-medium hover:text-[#FF6B00] transition-colors group text-left"
           >
             <div className="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-950/60 flex items-center justify-center text-[#FF6B00]">
@@ -97,20 +93,10 @@ export const Header: React.FC = () => {
               </span>
             </div>
           </button>
-
-          {/* Role badge switcher quick toggle */}
-          {role !== 'customer' && (
-            <button
-              onClick={() => navigateTo(role === 'seller' ? 'seller_dashboard' : 'rider_dashboard')}
-              className="px-2 py-0.5 rounded-full bg-orange-500/10 text-[#FF6B00] text-[11px] font-bold border border-orange-500/20"
-            >
-              {role === 'seller' ? '🏪 Seller Mode' : '🛵 Rider Mode'}
-            </button>
-          )}
         </div>
 
-        {/* Search Input Bar (Visible on Home and Explore) */}
-        {(activeScreen === 'home' || activeScreen === 'explore') && (
+        {/* Search Input Bar (Visible on Explore) */}
+        {activeScreen === 'explore' && (
           <div className="relative mt-1">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
               <Search className="w-4 h-4" />

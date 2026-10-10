@@ -4,6 +4,10 @@ export interface CapacitorConfig {
   webDir: string;
   server?: {
     androidScheme?: string;
+    iosScheme?: string;
+  };
+  ios?: {
+    contentInset?: 'always' | 'automatic' | 'never';
   };
   plugins?: Record<string, any>;
 }
@@ -14,6 +18,10 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     androidScheme: 'https',
+    iosScheme: 'https',
+  },
+  ios: {
+    contentInset: 'always',
   },
   plugins: {
     SplashScreen: {
@@ -31,4 +39,3 @@ const config: CapacitorConfig = {
 };
 
 export default config;
-
